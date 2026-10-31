@@ -1,0 +1,4 @@
+cache/
+undo/
+__pycache__/
+.DS_Store

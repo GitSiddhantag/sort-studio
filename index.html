@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sorting my Downloads folder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#231c20; --muted:#9a8b93; --line:#ead5df; --line-strong:#dcbccb;
+  --pink:#e486ad; --pink-deep:#c8508a; --blush:#fbe4ee; --card:rgba(255,255,255,.62);
+  --petal:#f8d6e4; --petal-edge:#efbad0; --core:#625c64; --claude:#d97757;
+  --mini:16px; --gap:3px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:Inter,-apple-system,"Helvetica Neue",Arial,sans-serif;color:var(--ink);overflow:hidden;
+  background:
+    radial-gradient(900px 620px at 22% 62%, rgba(246,196,218,.55), transparent 65%),
+    radial-gradient(800px 600px at 62% 58%, rgba(250,214,229,.6), transparent 62%),
+    radial-gradient(700px 400px at 90% 0%, #fff, transparent 70%),
+    linear-gradient(180deg,#fffbfd 0%,#fdf1f6 55%,#fbe8f0 100%);
+}
+.app{height:100vh;display:flex;flex-direction:column;padding:22px 34px 18px}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.who{display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;color:#fff;
+  background:linear-gradient(140deg,#f2a9c8,#c8508a);box-shadow:0 2px 8px rgba(200,80,138,.3)}
+.owner{font-size:13px;font-weight:600;line-height:1.2}
+.sub{font-size:11.5px;color:var(--muted)}
+.sub b{color:var(--claude);font-weight:600}
+.actions{display:flex;align-items:center;gap:14px}
+.status{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted)}
+.status i{width:6px;height:6px;border-radius:50%;background:var(--line-strong)}
+.status.busy i{background:var(--pink);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25}}
+.btn{font:inherit;border:0;cursor:pointer;display:inline-flex;align-items:center;gap:8px;border-radius:999px;
+  padding:8px 16px 8px 9px;font-size:13.5px;font-weight:600;color:var(--ink);background:#fff;
+  box-shadow:0 0 0 1px var(--line),0 4px 14px rgba(200,80,138,.12);transition:transform .15s,box-shadow .15s}
+.btn:hover{transform:translateY(-1px);box-shadow:0 0 0 1px var(--line-strong),0 6px 18px rgba(200,80,138,.2)}
+.btn:disabled{opacity:.55;cursor:default;transform:none}
+.btn svg{width:24px;height:24px}
+.btn.plain{padding:8px 16px}
+.btn.dark{background:var(--ink);color:#fff;box-shadow:0 6px 18px rgba(35,28,32,.25)}
+
+/* title + stats */
+h1{margin-top:18px;font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1}
+h1{position:relative}
+.pick{font:inherit;color:inherit;background:none;border:0;cursor:pointer;display:inline-flex;align-items:baseline;gap:4px;padding:0 2px;border-radius:12px;transition:background .15s}
+.pick:hover{background:rgba(228,134,173,.12)}
+.pick svg{width:18px;height:18px;align-self:center;color:var(--pink-deep);transition:transform .2s}
+.pick[aria-expanded="true"] svg{transform:rotate(180deg)}
+.menu{position:absolute;top:calc(100% + 10px);left:0;z-index:70;min-width:230px;padding:6px;border-radius:16px;background:rgba(255,255,255,.95);
+  backdrop-filter:blur(10px);box-shadow:0 0 0 1px var(--line),0 18px 40px rgba(200,80,138,.2);font-size:14px;font-weight:500;letter-spacing:0}
+.menu[hidden]{display:none}
+.menu button{font:inherit;width:100%;display:flex;align-items:center;gap:9px;padding:9px 12px;border:0;border-radius:10px;background:none;color:var(--ink);cursor:pointer;text-align:left}
+.menu button:hover{background:var(--blush)}
+.menu button svg{width:15px;height:15px;color:var(--muted);flex:none}
+.menu button.on{color:var(--pink-deep)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:5px 6px}
+h1 em{font-family:"Instrument Serif",Georgia,serif;font-weight:400;font-style:italic;font-size:1.22em;color:var(--pink-deep);letter-spacing:0}
+.stats{display:flex;gap:clamp(24px,6vw,96px);margin-top:20px;padding-bottom:16px}
+.stat label{display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.stat label i{width:5px;height:5px;border-radius:50%;background:var(--pink)}
+.stat b{display:block;margin-top:5px;font-size:30px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+
+/* board */
+.board{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr) minmax(0,1fr);gap:26px}
+.col{overflow-y:auto;scrollbar-width:none;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start;padding:2px}
+.col::-webkit-scrollbar{display:none}
+.group{grid-column:1/-1;display:flex;align-items:center;gap:7px;font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:19px;margin:4px 0 -2px}
+.group i{width:6px;height:6px;border-radius:50%;background:var(--ink)}
+.card{border:1.5px dashed var(--line-strong);border-radius:16px;background:rgba(255,255,255,.3);padding:9px 11px 11px;opacity:.5;transition:opacity .35s,background .35s,border-color .35s}
+.card.live{opacity:1;border-style:solid;border-color:var(--line-strong);background:var(--card);backdrop-filter:blur(6px)}
+.card.big{grid-row:span 2}
+.card-h{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:500;margin-bottom:8px}
+.card-h svg{width:14px;height:14px;flex:none;color:var(--muted)}
+.card-h span{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-h b{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.card-h b.tick{animation:tick .25s}
+@keyframes tick{40%{transform:scale(1.25);color:var(--pink-deep)}}
+.grid{display:flex;flex-wrap:wrap;gap:var(--gap);height:calc(var(--mini)*2 + var(--gap));overflow:hidden;align-content:flex-start}
+.card.big .grid{height:calc(var(--mini)*7 + var(--gap)*6)}
+.mini{width:var(--mini);height:var(--mini);border-radius:4px;overflow:hidden;opacity:0;flex:none;box-shadow:0 0 0 1px rgba(35,28,32,.35)}
+.mini.in{opacity:1;animation:pop .28s ease-out}
+@keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}}
+.mini img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* centre */
+.center{position:relative;min-height:0}
+.cloud{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);animation:breathe 6s ease-in-out infinite}
+@keyframes breathe{50%{transform:translate(-50%,-50%) scale(1.012) rotate(.4deg)}}
+.tile{position:absolute;border-radius:22%;overflow:hidden;background:#f3e4eb;border:2px solid #fff;
+  box-shadow:0 0 0 1px rgba(35,28,32,.55),0 4px 10px rgba(70,20,45,.22);will-change:transform}
+.tile img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.ext{width:100%;height:100%;display:grid;place-items:center;font-weight:700;letter-spacing:.02em;font-size:calc(var(--s,40px)*.27);text-transform:uppercase}
+.mini .ext{font-size:5px}
+.k-video .ext{background:#3a3238;color:#f6cfe0}
+.k-audio .ext{background:linear-gradient(135deg,#f5b3cf,#c8508a);color:#fff}
+.k-doc .ext{background:#fff;color:var(--pink-deep)}
+.k-sheet .ext{background:#dff0e6;color:#2f7a55}
+.k-app .ext{background:#ece7f7;color:#5b4a9a}
+.k-zip .ext{background:#f7ebda;color:#9a6a2a}
+.k-code .ext{background:#2a2327;color:#f6cfe0}
+.k-font .ext{background:#fff;color:var(--ink);font-family:"Instrument Serif",serif;font-style:italic;text-transform:none}
+.k-partial .ext{background:repeating-linear-gradient(45deg,#fff,#fff 4px,#f6dbe7 4px,#f6dbe7 8px);color:var(--muted)}
+.k-other .ext,.k-image .ext{background:#f0e6eb;color:var(--muted)}
+.play{position:absolute;right:8%;bottom:8%;width:28%;height:28%;border-radius:50%;background:rgba(0,0,0,.45)}
+.play::after{content:"";position:absolute;left:38%;top:28%;border-left:solid 7px #fff;border-top:solid 4.5px transparent;border-bottom:solid 4.5px transparent}
+.mess{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-family:"Instrument Serif",Georgia,serif;font-style:italic;font-size:19px;color:var(--pink-deep);transition:opacity .4s}
+.flower{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);pointer-events:none;opacity:0}
+.flower svg{width:100%;height:100%;overflow:visible}
+.petal{transform-box:view-box;transform-origin:0 0}
+.dupes{position:absolute;right:0;bottom:46px;width:min(300px,62%)}
+.fly{position:fixed;inset:0;pointer-events:none;z-index:50}
+
+/* dock + dialog */
+button[hidden]{display:none!important}
+.dock{position:fixed;right:28px;bottom:22px;display:flex;align-items:center;gap:10px;padding:8px;border-radius:999px;
+  background:rgba(255,255,255,.82);backdrop-filter:blur(10px);box-shadow:0 0 0 1px var(--line),0 12px 30px rgba(200,80,138,.18);z-index:60;
+  transition:opacity .3s,transform .3s}
+.dock[hidden]{display:flex;opacity:0;pointer-events:none;transform:translateY(16px)}
+.dock .note{font-size:12.5px;color:var(--muted);padding:0 10px}
+dialog{margin:auto;border:0;border-radius:20px;padding:26px 26px 20px;max-width:420px;box-shadow:0 30px 80px rgba(70,20,45,.3);color:var(--ink);font-family:inherit}
+dialog::backdrop{background:rgba(60,20,40,.25);backdrop-filter:blur(3px)}
+dialog h2{font-size:20px;font-weight:700;letter-spacing:-.01em}
+dialog h2 em{font-family:"Instrument Serif",serif;font-weight:400;color:var(--pink-deep);font-size:1.15em}
+dialog p{margin-top:10px;font-size:13.5px;line-height:1.5;color:#5d4f57}
+dialog .row{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--muted);font-size:14px}
+
+@media (max-width:900px){
+  body{overflow:auto}
+  .app{height:auto;padding:16px}
+  .board{grid-template-columns:1fr;gap:16px}
+  .center{height:420px;order:-1}
+  .stats{flex-wrap:wrap;gap:16px 28px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="who">
+      <div class="avatar" id="avatar"></div>
+      <div><div class="owner" id="owner"></div><div class="sub">sorted with <b>Claude</b></div></div>
+    </div>
+    <div class="actions">
+      <span class="status" id="status"><i></i><span id="statusText">Reading folder…</span></span>
+      <button class="btn" id="sortBtn" disabled><svg viewBox="-110 -110 220 220" id="btnFlower"></svg><span>Sort</span></button>
+    </div>
+  </header>
+
+  <h1>Sorting my <button class="pick" id="folderBtn" aria-expanded="false" title="Sort a different folder"><em id="folderName">Downloads</em><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button> folder
+    <div class="menu" id="folderMenu" hidden></div>
+  </h1>
+
+  <section class="stats">
+    <div class="stat"><label><i></i>Total files</label><b id="sTotal">0</b></div>
+    <div class="stat"><label>Sorted</label><b id="sSorted">0</b></div>
+    <div class="stat"><label>Photos</label><b id="sPhotos">0</b></div>
+    <div class="stat"><label>Videos</label><b id="sVideos">0</b></div>
+    <div class="stat"><label>Folders created</label><b id="sFolders">0</b></div>
+    <div class="stat"><label>Duplicates found</label><b id="sDupes">0</b></div>
+  </section>
+
+  <main class="board">
+    <div class="col" id="colL"></div>
+    <div class="center" id="center">
+      <div class="cloud" id="cloud"></div>
+      <div class="flower" id="flower"><svg viewBox="-110 -110 220 220"></svg></div>
+      <div class="dupes" id="dupeSlot"></div>
+      <div class="mess" id="mess">a total mess</div>
+    </div>
+    <div class="col" id="colR"></div>
+  </main>
+</div>
+
+<div class="dock" id="dock" hidden>
+  <span class="note" id="dockNote"></span>
+  <button class="btn plain" id="replayBtn">Replay</button>
+  <button class="btn plain" id="undoBtn" hidden>Undo</button>
+  <button class="btn dark plain" id="moveBtn">Move files for real</button>
+</div>
+
+<dialog id="confirm">
+  <h2>Move files into <em>folders</em>?</h2>
+  <p id="confirmText"></p>
+  <div class="row">
+    <button class="btn plain" id="cancelMove">Cancel</button>
+    <button class="btn dark plain" id="doMove">Move files</button>
+  </div>
+</dialog>
+
+<div class="fly" id="fly"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const FOLDER_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 9.7v8.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></svg>';
+const TRASH_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/></svg>';
+const GROUPS = ['Photos', 'Videos', 'Audio', 'Files'];
+
+let DATA, tiles = new Map(), cards = new Map(), stats, running = false, sorted = false;
+const SPEED = Math.max(.25, Math.min(4, parseFloat(new URLSearchParams(location.search).get('speed')) || 1));  // ?speed=1.5 = slower
+
+function flowerSVG(svg, bloomable) {
+  const petals = Array.from({length: 8}, (_, i) =>
+    `<ellipse class="petal" cx="0" cy="-52" rx="27" ry="48" stroke-width="2" style="fill:var(--petal);stroke:var(--petal-edge);transform:rotate(${i * 45}deg)"/>`).join('');
+  svg.innerHTML = petals + '<circle r="25" style="fill:var(--core)"/><circle cx="7" cy="-7" r="8" fill="#fff" opacity=".95"/>';
+  if (!bloomable) svg.querySelectorAll('.petal').forEach(p => p.style.fill = '#f3b3cd');
+}
+
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const rand = (a, b) => a + Math.random() * (b - a);
+
+function face(f, cls) {
+  const el = document.createElement('div');
+  el.className = `${cls} k-${f.kind}`;
+  if (f.thumb) {
+    el.innerHTML = `<img src="${f.thumb}" alt="" decoding="async" draggable="false">` + (f.kind === 'video' && cls === 'tile' ? '<span class="play"></span>' : '');
+  } else {
+    el.innerHTML = `<div class="ext">${f.kind === 'font' ? 'Aa' : (f.ext || '?').slice(0, 4)}</div>`;
+  }
+  el.title = f.name;
+  return el;
+}
+
+function card(cat, big) {
+  const el = document.createElement('div');
+  el.className = 'card' + (big ? ' big' : '');
+  el.innerHTML = `<div class="card-h">${cat.key === 'dupes' ? TRASH_ICON : FOLDER_ICON}<span>${cat.name}</span><b>0</b></div><div class="grid"></div>`;
+  const c = {el, grid: el.querySelector('.grid'), count: el.querySelector('b'), n: 0, shown: 0, cap: null, last: null};
+  cards.set(cat.key, c);
+  return el;
+}
+
+function buildBoard() {
+  cards.clear();
+  const colL = $('#colL'), colR = $('#colR');
+  colL.innerHTML = colR.innerHTML = $('#dupeSlot').innerHTML = '';
+  const counts = {};
+  DATA.files.forEach(f => counts[f.cat] = (counts[f.cat] || 0) + 1);
+  const present = DATA.cats.filter(c => counts[c.key] && c.group !== 'dupes');
+  let groups = GROUPS.map(g => ({g, cats: present.filter(c => c.group === g)})).filter(x => x.cats.length);
+  const total = present.length;
+  // fill the left column up to half the cards (a big group may continue on the right)
+  const target = Math.ceil(total / 2);
+  let left = [], right = [], n = 0;
+  for (const grp of groups) {
+    if (n >= target) { right.push(grp); continue; }
+    if (n + grp.cats.length <= target + 1) { left.push(grp); n += grp.cats.length; continue; }
+    const take = target - n;
+    left.push({g: grp.g, cats: grp.cats.slice(0, take)});
+    right.push({g: grp.g, cats: grp.cats.slice(take)});
+    n = target;
+  }
+  const fill = (col, grps) => {
+    const biggest = grps.flatMap(x => x.cats).sort((a, b) => counts[b.key] - counts[a.key])[0];
+    for (const grp of grps) {
+      if (grp.g) { const h = document.createElement('div'); h.className = 'group'; h.innerHTML = `<i></i>${grp.g}`; col.appendChild(h); }
+      grp.cats.forEach(c => col.appendChild(card(c, c === biggest && counts[c.key] > 24)));
+    }
+  };
+  fill(colL, left); fill(colR, right);
+  if (counts.dupes) $('#dupeSlot').appendChild(card(DATA.cats.find(c => c.key === 'dupes'), false));
+  fitColumns();
+}
+
+// keep every card on screen: drop the tall "big" cards first, then shrink the mini thumbnails
+function fitColumns() {
+  for (const col of [$('#colL'), $('#colR')]) {
+    col.style.removeProperty('--mini');
+    const over = () => col.scrollHeight > col.clientHeight + 1;
+    if (over()) col.querySelectorAll('.card.big').forEach(c => c.classList.remove('big'));
+    for (let m = 15; over() && m >= 10; m--) col.style.setProperty('--mini', m + 'px');
+  }
+}
+
+function buildCloud() {
+  const center = $('#center'), cloud = $('#cloud');
+  cloud.innerHTML = '';
+  tiles.clear();
+  const box = Math.min(center.clientWidth, center.clientHeight * .86);
+  const D = Math.max(180, box * .92), R = D / 2;
+  cloud.style.width = cloud.style.height = D + 'px';
+  const fl = $('#flower');
+  fl.style.width = fl.style.height = D * .95 + 'px';
+  const files = shuffle([...DATA.files]), n = files.length;
+  if (!n) { center.insertAdjacentHTML('beforeend', '<div class="empty">This folder is already empty ✿</div>'); return; }
+  const s = Math.max(22, Math.min(92, Math.sqrt(Math.PI * R * R / n) * 1.3));
+  files.forEach((f, i) => {
+    const r = (R - s * .55) * Math.sqrt((i + .5) / n) + rand(-s * .15, s * .15);
+    const th = i * 2.39996 + rand(-.12, .12);
+    const el = face(f, 'tile');
+    const rot = rand(-18, 18);
+    el.style.cssText = `left:${R + r * Math.cos(th) - s / 2}px;top:${R + r * Math.sin(th) - s / 2}px;width:${s}px;height:${s}px;transform:rotate(${rot}deg);z-index:${(Math.random() * 1000) | 0};--s:${s}px`;
+    el.dataset.rot = rot;
+    cloud.appendChild(el);
+    tiles.set(f.id, {el, s, rot});
+  });
+}
+
+function resetStats() {
+  stats = {sorted: 0, photos: 0, videos: 0, folders: 0, dupes: 0};
+  $('#sTotal').textContent = DATA.files.length.toLocaleString();
+  ['sSorted', 'sPhotos', 'sVideos', 'sFolders', 'sDupes'].forEach(id => $('#' + id).textContent = '0');
+}
+
+function bump(id, key) { stats[key]++; $('#' + id).textContent = stats[key].toLocaleString(); }
+
+function status(text, busy) {
+  $('#statusText').textContent = text;
+  $('#status').classList.toggle('busy', !!busy);
+}
+
+// measure every card grid and tile once before the run, so flights never force a layout
+function measure() {
+  cards.forEach(c => {
+    const cs = getComputedStyle(c.grid);  // columns may shrink --mini to fit
+    const m = parseFloat(cs.getPropertyValue('--mini')), g = parseFloat(cs.getPropertyValue('--gap'));
+    const r = c.grid.getBoundingClientRect();
+    c.cols = Math.max(1, Math.floor((r.width + g) / (m + g)));
+    c.cap = c.cols * Math.max(1, Math.round((r.height + g) / (m + g)));
+    c.x0 = r.left; c.y0 = r.top; c.step = m + g; c.m = m;
+  });
+  tiles.forEach(t => {
+    const r = t.el.getBoundingClientRect();
+    t.cx = r.left + r.width / 2; t.cy = r.top + r.height / 2;
+  });
+}
+
+function slotFor(c, f) {
+  const i = Math.min(c.shown, c.cap - 1);
+  const pos = {x: c.x0 + (i % c.cols) * c.step + c.m / 2, y: c.y0 + Math.floor(i / c.cols) * c.step + c.m / 2, w: c.m};
+  if (c.shown < c.cap) {
+    const mini = face(f, 'mini');
+    c.grid.appendChild(mini);
+    c.shown++;
+    return {...pos, mini};
+  }
+  return {...pos, mini: null};
+}
+
+function land(f, c, mini) {
+  if (mini) {
+    mini.style.opacity = 1;
+    mini.animate([{transform: 'scale(.5)'}, {transform: 'scale(1.18)', offset: .65}, {transform: 'scale(1)'}], {duration: 260, easing: 'ease-out'});
+  }
+  if (c.n === 0) { c.el.classList.add('live'); bump('sFolders', 'folders'); }
+  c.n++;
+  c.count.textContent = c.n;
+  c.count.animate([{transform: 'scale(1)'}, {transform: 'scale(1.22)', color: '#c8508a', offset: .4}, {transform: 'scale(1)'}], {duration: 240});
+  bump('sSorted', 'sorted');
+  if (f.kind === 'image') bump('sPhotos', 'photos');
+  if (f.kind === 'video') bump('sVideos', 'videos');
+  if (f.cat === 'dupes') bump('sDupes', 'dupes');
+}
+
+function fly(f) {
+  const t = tiles.get(f.id), c = cards.get(f.cat);
+  const cx = t.cx, cy = t.cy;
+  const {x: tx, y: ty, w, mini} = slotFor(c, f);
+  const el = t.el;
+  el.style.left = cx - t.s / 2 + 'px';
+  el.style.top = cy - t.s / 2 + 'px';
+  el.style.zIndex = 1;
+  $('#fly').appendChild(el);
+  // curved path: quadratic bezier with a sideways bow, sampled into keyframes so the motion has no corners
+  const dx = tx - cx, dy = ty - cy, k = w / t.s;
+  const len = Math.hypot(dx, dy) || 1, bow = rand(.12, .3) * len * (Math.random() < .5 ? -1 : 1);
+  const qx = dx * .5 - dy / len * bow, qy = dy * .5 + dx / len * bow - rand(20, 60);
+  const peak = Math.max(1.12, k);
+  const frames = [];
+  for (let i = 0; i <= 24; i++) {
+    const p = i / 24;
+    const e = p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;  // easeInOutCubic
+    const x = 2 * (1 - e) * e * qx + e * e * dx, y = 2 * (1 - e) * e * qy + e * e * dy;
+    const sc = e < .3 ? 1 + (peak - 1) * (e / .3) : peak + (k - peak) * ((e - .3) / .7);
+    frames.push({transform: `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) rotate(${(t.rot * (1 - e)).toFixed(2)}deg) scale(${sc.toFixed(4)})`});
+  }
+  const anim = el.animate(frames, {duration: rand(560, 760) * SPEED, easing: 'linear', fill: 'forwards'});
+  return anim.finished.then(() => { el.remove(); land(f, c, mini); });
+}
+
+function bloom() {
+  const fl = $('#flower');
+  fl.animate([{opacity: 0, transform: 'translate(-50%,-50%) rotate(-50deg) scale(.3)'}, {opacity: 1, transform: 'translate(-50%,-50%) rotate(0) scale(1)'}],
+    {duration: 1400, easing: 'cubic-bezier(.2,.9,.25,1)', fill: 'forwards'});
+  fl.querySelectorAll('.petal').forEach((p, i) => p.animate(
+    [{transform: `rotate(${i * 45}deg) scale(0)`}, {transform: `rotate(${i * 45}deg) scale(1)`}],
+    {duration: 900, delay: 120 + i * 70, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'backwards'}));
+  const mess = $('#mess');
+  mess.style.opacity = 0;
+  setTimeout(() => { mess.textContent = 'all sorted ✿'; mess.style.opacity = 1; }, 450);
+}
+
+async function runSort() {
+  if (running || !DATA.files.length) return;
+  if (sorted) reset();
+  running = true;
+  $('#sortBtn').disabled = true;
+  $('#dock').hidden = true;
+  status('Sorting into folders…', true);
+  const order = shuffle([...DATA.files]);
+  // whole run lasts ~4-8 s like the reel, whatever the file count
+  const gap = Math.min(5600, Math.max(3200, order.length * 32)) * SPEED / order.length;
+  $('#cloud').style.animationPlayState = 'paused';
+  measure();
+  const at = order.map((_, i) => Math.max(0, i * gap + rand(-.4, .4) * gap));
+  const t0 = performance.now();
+  const flights = [];
+  await new Promise(done => {
+    let i = 0;
+    const tick = now => {
+      while (i < order.length && at[i] <= now - t0) flights.push(fly(order[i++]));
+      i < order.length ? requestAnimationFrame(tick) : done();
+    };
+    requestAnimationFrame(tick);
+  });
+  await Promise.all(flights);
+  bloom();
+  const secs = ((performance.now() - t0) / 1000).toFixed(1);
+  status(`Sorted ${DATA.files.length.toLocaleString()} files into ${stats.folders} folders · ${secs}s`);
+  running = false;
+  sorted = true;
+  $('#sortBtn').disabled = false;
+  showDock();
+}
+
+function showDock() {
+  const moveBtn = $('#moveBtn'), undoBtn = $('#undoBtn');
+  if (!DATA.can_move) {
+    $('#dockNote').textContent = 'Preview only: sub-folders included';
+    moveBtn.hidden = true;
+  } else if (DATA.moved) {
+    $('#dockNote').textContent = 'Files moved ✓';
+    moveBtn.hidden = true;
+    undoBtn.hidden = false;
+  } else {
+    $('#dockNote').textContent = 'This was a preview, nothing moved yet';
+    moveBtn.hidden = false;
+    undoBtn.hidden = true;
+  }
+  $('#dock').hidden = false;
+}
+
+function reset() {
+  $('#fly').innerHTML = '';
+  $('#flower').getAnimations().forEach(a => a.cancel());
+  $('#flower').style.opacity = 0;
+  $('#mess').textContent = 'a total mess';
+  $('#cloud').style.animationPlayState = '';
+  buildBoard();
+  buildCloud();
+  resetStats();
+  sorted = false;
+  status('Ready to sort');
+}
+
+async function post(url, body) {
+  const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Sort-Token': DATA.token}, body: JSON.stringify(body || {})});
+  return r.json();
+}
+
+function openConfirm() {
+  const movable = DATA.files.filter(f => f.cat !== 'partial');
+  const folders = new Set(movable.map(f => f.cat)).size;
+  const dupes = DATA.files.filter(f => f.cat === 'dupes').length;
+  $('#confirmText').innerHTML = `${movable.length.toLocaleString()} files go into ${folders} folders inside <b>${DATA.root}</b>.` +
+    (dupes ? ` ${dupes} duplicates go to a "Duplicates (check, then delete)" folder.` : '') +
+    ` Nothing is deleted, and Undo puts every file back.`;
+  $('#confirm').showModal();
+}
+
+async function doMove() {
+  $('#confirm').close();
+  status('Moving files…', true);
+  const res = await post('/api/apply', {confirm: 'MOVE'});
+  if (res.error) { status(res.error); return; }
+  DATA.moved = true;
+  status(`Moved ${res.moved} files into ${res.folders} folders` + (res.skipped.length ? ` · ${res.skipped.length} left in place` : ''));
+  showDock();
+}
+
+async function doUndo() {
+  status('Putting files back…', true);
+  const res = await post('/api/undo');
+  if (res.error) { status(res.error); return; }
+  DATA.moved = false;
+  status(`Put ${res.restored} files back` + (res.stuck.length ? ` · ${res.stuck.length} could not be restored` : ''));
+  showDock();
+}
+
+function applyData() {
+  $('#fly').innerHTML = '';
+  $('#flower').getAnimations().forEach(a => a.cancel());
+  $('#flower').style.opacity = 0;
+  $('#mess').textContent = 'a total mess';
+  $('#dock').hidden = true;
+  $('#cloud').style.animationPlayState = '';
+  $('#center .empty')?.remove();
+  sorted = false;
+  $('#owner').textContent = DATA.owner;
+  $('#avatar').textContent = DATA.owner.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  $('#folderName').textContent = DATA.folder;
+  document.title = `Sorting my ${DATA.folder} folder`;
+  buildBoard();
+  buildCloud();
+  resetStats();
+  status(DATA.moved ? 'Files already moved' : 'Ready to sort');
+  $('#sortBtn').disabled = false;
+}
+
+function openMenu(open) {
+  const menu = $('#folderMenu'), btn = $('#folderBtn');
+  if (open && running) return;
+  btn.setAttribute('aria-expanded', open);
+  menu.hidden = !open;
+  if (!open) return;
+  menu.style.left = btn.offsetLeft + 'px';
+  const item = (label, path, on) => `<button data-path="${path}" class="${on ? 'on' : ''}">${FOLDER_ICON}${label}</button>`;
+  menu.innerHTML = DATA.shortcuts.map(s => item(s.name, s.path, s.path === DATA.root)).join('') +
+    '<hr>' + item('Choose another folder…', 'pick', false);
+}
+
+async function switchFolder(path) {
+  openMenu(false);
+  $('#sortBtn').disabled = true;
+  status(path === 'pick' ? 'Pick a folder in the window that opened…' : 'Reading folder…', true);
+  const res = await post('/api/folder', {path});
+  if (res.cancelled || res.error) {
+    status(res.error || 'Ready to sort');
+    $('#sortBtn').disabled = false;
+    return;
+  }
+  DATA = res;
+  applyData();
+}
+
+async function load() {
+  flowerSVG($('#btnFlower'), false);
+  flowerSVG($('#flower svg'), true);
+  DATA = await (await fetch('/api/scan')).json();
+  applyData();
+  if (new URLSearchParams(location.search).has('auto')) setTimeout(runSort, 800);
+}
+
+$('#sortBtn').onclick = runSort;
+$('#replayBtn').onclick = () => { reset(); runSort(); };
+$('#moveBtn').onclick = openConfirm;
+$('#doMove').onclick = doMove;
+$('#cancelMove').onclick = () => $('#confirm').close();
+$('#undoBtn').onclick = doUndo;
+$('#folderBtn').onclick = e => { e.stopPropagation(); openMenu($('#folderMenu').hidden); };
+$('#folderMenu').onclick = e => { const b = e.target.closest('button'); if (b) switchFolder(b.dataset.path); };
+document.addEventListener('click', e => { if (!e.target.closest('#folderMenu')) openMenu(false); });
+addEventListener('keydown', e => {
+  if ($('#confirm').open) return;
+  if (e.key === 'Escape') return openMenu(false);
+  if ((e.code === 'Space' || e.code === 'Enter') && !e.target.closest('button')) { e.preventDefault(); runSort(); }
+  if (e.key === 'r' && !running) reset();
+});
+let rt;
+addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (!running && !sorted && DATA) { cards.forEach(c => c.cap = null); buildCloud(); } }, 200); });
+load();
+</script>
+</body>
+</html>
